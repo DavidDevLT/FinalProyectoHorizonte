@@ -1,21 +1,10 @@
 from tkinter import ttk
 from tkinter import messagebox
-from tkinter import *
 import tkinter as tk
-from tkinter.font import BOLD
 import src.GUI.generic as utl
 from datetime import datetime
 from src.GUI.GUI_voucher import Voucher
-from src.model.declarative_base import Session, engine, Base
-from src.model.employer import Employer
-from src.model.company_data import CompanyData
-from src.model.employee import Employee
-from src.GUI.GUI_voucher import Voucher
-from src.model.work import Work
-from src.model.remuneration import Remuneration
-from src.model.discount import Discount
 from src.GUI.conexion import conexion
-import sqlite3
 import os
 class MasterPanel:
 
@@ -131,23 +120,25 @@ class MasterPanel:
         sueldoBasicoTemp = miCursor.fetchone()
         sueldoBasico = sueldoBasicoTemp[0]
         bonificacionSuplementaria = 0.03 * float(sueldoBasico)
-        print(bonificacionSuplementaria)
+        bonificacionSuplementaria = round(bonificacionSuplementaria, 2)
 
         miCursor.execute("SELECT extraHours FROM tblWork WHERE idWk = ?", (IDEmp,))
         HoraExtraTemp = miCursor.fetchone()
         HoraExtra = HoraExtraTemp[0]
         pagoHoraNormal = float(sueldoBasico) / 30 / 8
+        pagoHoraNormal = round(pagoHoraNormal, 2)
         pagoHoraExtra = 1.5 * float(HoraExtra) * pagoHoraNormal
-        print(pagoHoraExtra)
+        pagoHoraExtra = round(pagoHoraExtra, 2)
 
         miCursor.execute("SELECT bonusMobility FROM tblRemuneration WHERE idRemun = ?", (IDEmp,))
         movilidadTemp = miCursor.fetchone()
         movilidad = movilidadTemp[0]
         bonificacionGen = movilidad + bonificacionSuplementaria + pagoHoraExtra
+        bonificacionGen = round(bonificacionGen, 2)
         remuneracionComputable = float(sueldoBasico) + movilidad + bonificacionSuplementaria
+        remuneracionComputable = round(remuneracionComputable, 2)
         remuneracionTotal = bonificacionGen + 0 # 0 HACE REFERENCIA AL CTS
-        print(bonificacionGen)
-        print(remuneracionComputable)
+        remuneracionTotal = round(remuneracionTotal, 2)
 
         # Rellena tblRemun con calculos Bonificacion
         miCursor.execute("UPDATE tblRemuneration SET bonusOvertime = ? WHERE idRemun = ?", (pagoHoraExtra, IDEmp))
@@ -159,8 +150,11 @@ class MasterPanel:
 
         # Calculo de Descuento
         descuentoFalta = remuneracionComputable/30 * int(DNL)
+        descuentoFalta = round(descuentoFalta, 2)
         descuentoTardanza = remuneracionComputable/30/8/60 * int(MinT)
+        descuentoTardanza = round(descuentoTardanza, 2)
         descuentoTotal = descuentoTardanza+ descuentoFalta
+        descuentoTotal = round(descuentoTotal, 2)
 
         # Rellena tblDiscount con calculos Descuento
         miCursor.execute("UPDATE tblDiscount SET lackDisc = ? WHERE idDisc = ?", (descuentoFalta, IDEmp))
@@ -169,6 +163,7 @@ class MasterPanel:
 
         # Rellena tblWork con calculos
         sueldoNeto = float(sueldoBasico) + remuneracionTotal - descuentoTotal
+        sueldoNeto = round(sueldoNeto, 2)
         miCursor.execute("UPDATE tblWork SET netIncome = ? WHERE idWk = ?", (sueldoNeto, IDEmp))
 
         # Rellena Voucher
@@ -177,12 +172,7 @@ class MasterPanel:
 
         miConexion.commit()
 
-        # MUESTRA EL VOUCHER
-        #self.root.destroy()
-        #Voucher()
-        ventana = Voucher(self.root)
-    #def abrir_ventana_secundaria(self):
-     #   ventana = Voucher(self.root)
+        ventana = Voucher(self.root, IDEmp)
 
     def interfaz_principal(self, miCursor, miConexion):
 
@@ -289,14 +279,12 @@ class MasterPanel:
         self.spinbox_MinTrd.place(x=880, y=340)
 
 
+
         boton_CancelCalculo = tk.Button(frame_main, text="CANCELAR", command=lambda: self.cancelaDatos(combo, self.dni_Emp, self.nombre_Emp, self.telefono_Emp, self.email_Emp, self.cuentaAhorro_Emp, self.sueldoB_Emp, self.spinbox_HoraEx, self.var, self.spinbox_DiasNoLab, self.spinbox_MinTrd))
         boton_CancelCalculo.place(x=800, y=450)
 
         boton_RegistrarCalculo = tk.Button(frame_main, text="GUARDAR", command=lambda: self.almacenaDatos(combo, self.spinbox_HoraEx, self.var, self.spinbox_DiasNoLab, self.spinbox_MinTrd, miCursor, miConexion))
         boton_RegistrarCalculo.place(x=1000, y=450)
-
-        #self.btn_abrir = tk.Button(frame_main, text="Abrir Ventana Secundaria", command=self.abrir_ventana_secundaria)
-        #self.btn_abrir.pack(pady=20)
 
         return frame_main
 
